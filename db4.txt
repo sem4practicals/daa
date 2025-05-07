@@ -1,0 +1,189 @@
+Company database
+#DROP DATABASE company;
+
+CREATE DATABASE company;
+USE company;
+
+CREATE TABLE DEPARTMENT (
+    DepartmentID INT AUTO_INCREMENT PRIMARY KEY,
+    DepartmentName VARCHAR(100) UNIQUE NOT NULL,
+    Location VARCHAR(100)
+);
+
+CREATE TABLE EMPLOYEE (
+    EmployeeID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    Phone VARCHAR(20),
+    HireDate DATE NOT NULL,
+    Salary DECIMAL(10,2) NOT NULL,
+    DepartmentID INT,
+    ManagerID INT,
+    FOREIGN KEY (DepartmentID) REFERENCES DEPARTMENT(DepartmentID),
+    FOREIGN KEY (ManagerID) REFERENCES EMPLOYEE(EmployeeID) ON DELETE SET NULL
+);
+
+CREATE TABLE PROJECT (
+    ProjectID INT AUTO_INCREMENT PRIMARY KEY,
+    ProjectName VARCHAR(100) NOT NULL,
+    StartDate DATE,
+    EndDate DATE,
+    Budget DECIMAL(12,2)
+);
+
+CREATE TABLE EMPLOYEEPROJECTS (
+    EmployeeID INT,
+    ProjectID INT,
+    Role VARCHAR(50),
+    PRIMARY KEY (EmployeeID, ProjectID),
+    FOREIGN KEY (EmployeeID) REFERENCES EMPLOYEE(EmployeeID) ON DELETE CASCADE,
+    FOREIGN KEY (ProjectID) REFERENCES PROJECT(ProjectID) ON DELETE CASCADE
+);
+
+CREATE TABLE SALARY (
+    SalaryID INT AUTO_INCREMENT PRIMARY KEY,
+    EmployeeID INT,
+    Amount DECIMAL(10,2) NOT NULL,
+    StartDate DATE NOT NULL,
+    EndDate DATE,
+    FOREIGN KEY (EmployeeID) REFERENCES EMPLOYEE(EmployeeID) ON DELETE CASCADE
+);
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+# Query 1: Retrieve the names of all employees who do not have supervisors.
+SELECT FirstName, LastName 
+FROM EMPLOYEE 
+WHERE ManagerID IS NULL;
+
+# Query 2: Retrieve the project IDs of projects that have an employee with the last name 'Smith' as a worker.
+SELECT DISTINCT ProjectID
+FROM EMPLOYEEPROJECTS
+WHERE EmployeeID IN (
+    SELECT EmployeeID FROM EMPLOYEE WHERE LastName = 'Smith'
+);
+
+# Query 3: Retrieve employees who work on the same project as 'John Smith'.
+SELECT DISTINCT E1.FirstName, E1.LastName
+FROM EMPLOYEE E1
+JOIN EMPLOYEEPROJECTS EP1 ON E1.EmployeeID = EP1.EmployeeID
+WHERE EP1.ProjectID IN (
+    SELECT ProjectID FROM EMPLOYEEPROJECTS EP2
+    JOIN EMPLOYEE E2 ON EP2.EmployeeID = E2.EmployeeID
+    WHERE E2.FirstName = 'John' AND E2.LastName = 'Smith'
+);
+
+# Query 4: Retrieve the names of employees whose salary is greater than all employees in Department 5.
+SELECT FirstName, LastName
+FROM EMPLOYEE
+WHERE Salary > ALL (
+    SELECT Salary FROM EMPLOYEE WHERE DepartmentID = 5
+);
+
+# Query 5: Retrieve employees who have a salary greater than $50,000 and are assigned to at least one project.
+SELECT DISTINCT FirstName, LastName
+FROM EMPLOYEE
+WHERE Salary > 50000 AND EmployeeID IN (
+    SELECT EmployeeID FROM EMPLOYEEPROJECTS
+);
+
+# Query 6: Retrieve the total number of employees in each department.
+SELECT DepartmentID, COUNT(*) AS TotalEmployees
+FROM EMPLOYEE
+GROUP BY DepartmentID;
+
+# Query 7: Retrieve the total salary expense for each department.
+SELECT D.DepartmentID, D.DepartmentName, SUM(E.Salary) AS TotalSalary
+FROM DEPARTMENT D
+JOIN EMPLOYEE E ON D.DepartmentID = E.DepartmentID
+GROUP BY D.DepartmentID;
+
+# Query 8: Retrieve the highest, lowest, and average salary of employees.
+SELECT MAX(Salary) AS HighestSalary, MIN(Salary) AS LowestSalary, AVG(Salary) AS AverageSalary
+FROM EMPLOYEE;
+
+# Query 9: Retrieve the details of employees who have no projects assigned.
+SELECT * FROM EMPLOYEE
+WHERE EmployeeID NOT IN (
+    SELECT DISTINCT EmployeeID FROM EMPLOYEEPROJECTS
+);
+
+# Query 10: Retrieve the project names and number of employees working on each project.
+SELECT P.ProjectName, COUNT(EP.EmployeeID) AS EmployeeCount
+FROM PROJECT P
+LEFT JOIN EMPLOYEEPROJECTS EP ON P.ProjectID = EP.ProjectID
+GROUP BY P.ProjectName;
+
+# Query 11: Retrieve the department with the highest total salary expense.
+SELECT D.DepartmentName, SUM(E.Salary) AS TotalSalary
+FROM DEPARTMENT D
+JOIN EMPLOYEE E ON D.DepartmentID = E.DepartmentID
+GROUP BY D.DepartmentID
+ORDER BY TotalSalary DESC
+LIMIT 1;
+
+# Query 12: Retrieve employees who joined before the year 2010.
+SELECT FirstName, LastName, HireDate
+FROM EMPLOYEE
+WHERE YEAR(HireDate) < 2010;
+
+# Query 13: Retrieve employees with the same last name working in different departments.
+SELECT E1.FirstName, E1.LastName, E1.DepartmentID, E2.DepartmentID
+FROM EMPLOYEE E1
+JOIN EMPLOYEE E2 ON E1.LastName = E2.LastName AND E1.EmployeeID <> E2.EmployeeID
+WHERE E1.DepartmentID <> E2.DepartmentID;
+
+# Query 14: Retrieve the project with the maximum budget.
+SELECT ProjectName, Budget
+FROM PROJECT
+ORDER BY Budget DESC
+LIMIT 1;
+
+# Query 15: Retrieve employees who work on more than 3 projects.
+SELECT E.FirstName, E.LastName, COUNT(EP.ProjectID) AS ProjectCount
+FROM EMPLOYEE E
+JOIN EMPLOYEEPROJECTS EP ON E.EmployeeID = EP.EmployeeID
+GROUP BY E.EmployeeID
+HAVING COUNT(EP.ProjectID) > 3;
+
+# Query 16: Retrieve employees who do not have a phone number recorded.
+SELECT FirstName, LastName
+FROM EMPLOYEE
+WHERE Phone IS NULL;
+
+# Query 17: Retrieve employees whose salary is in the top 10% of all employees.
+#SELECT FirstName, LastName, Salary 
+#FROM EMPLOYEE 
+#WHERE Salary >= (
+#    SELECT MIN(Salary) FROM (
+#        SELECT Salary 
+#        FROM EMPLOYEE 
+#        ORDER BY Salary DESC 
+#        LIMIT (SELECT COUNT(*) * 0.1 FROM EMPLOYEE)
+#    ) AS TopSalaries
+#);
+
+
+
+# Query 18: Retrieve the number of employees who have an email ending in '@company.com'.
+SELECT COUNT(*) AS EmployeeCount
+FROM EMPLOYEE
+WHERE Email LIKE '%@company.com';
+
+# Query 19: Retrieve the total number of employees who have worked on a project.
+SELECT COUNT(DISTINCT EmployeeID) AS TotalEmployees
+FROM EMPLOYEEPROJECTS;
+
+# Query 20: Retrieve projects that started after January 1, 2020.
+SELECT ProjectName, StartDate
+FROM PROJECT
+WHERE StartDate > '2020-01-01';
+
+# Query 21: Retrieve employees who have the same first and last name as another employee.
+SELECT FirstName, LastName, COUNT(*) AS Count
+FROM EMPLOYEE
+GROUP BY FirstName, LastName
+HAVING COUNT(*) > 1;

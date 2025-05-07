@@ -1,0 +1,54 @@
+-- II. Database Administration Commands
+
+-- 1. Create User
+CREATE USER 'college_admin'@'localhost' IDENTIFIED BY 'securePassword123';
+CREATE USER 'student_user'@'localhost' IDENTIFIED BY 'student123';
+
+-- 2. Create Role
+CREATE ROLE 'admin_role';
+CREATE ROLE 'read_only_role';
+CREATE ROLE 'society_manager_role';
+
+-- 3. Grant Privileges to Roles
+-- Admin role gets full privileges
+GRANT ALL PRIVILEGES ON college_db.* TO 'admin_role';
+
+-- Read-only role gets SELECT privileges
+GRANT SELECT ON college_db.* TO 'read_only_role';
+
+-- Society manager role gets specific privileges
+GRANT SELECT, INSERT, UPDATE ON college_db.SOCIETY TO 'society_manager_role';
+GRANT SELECT, INSERT, UPDATE, DELETE ON college_db.ENROLLMENT TO 'society_manager_role';
+GRANT SELECT ON college_db.STUDENT TO 'society_manager_role';
+
+-- Assign roles to users
+GRANT 'admin_role' TO 'college_admin'@'localhost';
+GRANT 'read_only_role', 'society_manager_role' TO 'student_user'@'localhost';
+
+-- Set default roles for users
+SET DEFAULT ROLE 'admin_role' TO 'college_admin'@'localhost';
+SET DEFAULT ROLE ALL TO 'student_user'@'localhost';
+
+-- 4. Revoke Privileges from Role
+REVOKE INSERT, UPDATE, DELETE ON college_db.ENROLLMENT FROM 'read_only_role';
+REVOKE ALL PRIVILEGES ON college_db.STUDENT FROM 'society_manager_role';
+REVOKE 'society_manager_role' FROM 'student_user'@'localhost';
+
+-- 5. Create Index
+-- Create index on frequently queried columns
+CREATE INDEX idx_student_course ON STUDENT(Course);
+CREATE INDEX idx_student_dob ON STUDENT(DOB);
+CREATE INDEX idx_society_name ON SOCIETY(SocName);
+CREATE INDEX idx_enrollment_date ON ENROLLMENT(DateOfEnrollment);
+
+-- Composite index for enrollment queries
+CREATE INDEX idx_enrollment_rollno_sid ON ENROLLMENT(RollNo, SID);
+
+-- Create fulltext index for name searching
+CREATE FULLTEXT INDEX idx_student_name_fulltext ON STUDENT(StudentName);
+CREATE FULLTEXT INDEX idx_society_mentor_fulltext ON SOCIETY(MentorName);
+
+-- Show created indexes
+SHOW INDEX FROM STUDENT;
+SHOW INDEX FROM SOCIETY;
+SHOW INDEX FROM ENROLLMENT;
